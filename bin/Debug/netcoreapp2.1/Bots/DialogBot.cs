@@ -20,6 +20,23 @@ using System.Data.Sql;
 
 namespace Microsoft.BotBuilderSamples
 {
+    public class BasicBotState
+    {
+        public long Score;
+        public string Data;
+        public string Name;
+        public string phoneNumber;
+        public string ConfirmationKey;
+        public string CSRNGKey;
+        public string currentQuestion;
+        public string currentAnswer;
+        public string currentFact;
+        public string previousQuestion;
+        public string previousAnswer;
+        public string previousFact;
+        public bool UserVerified = false;
+    }
+
     // This IBot implementation can run any type of Dialog. The use of type parameterization is to allows multiple different bots
     // to be run at different endpoints within the same project. This can be achieved by defining distinct Controller types
     // each with dependency on distinct IBot types, this way ASP Dependency Injection can glue everything together without ambiguity.
@@ -33,6 +50,7 @@ namespace Microsoft.BotBuilderSamples
         protected readonly ILogger _logger;
         private IConfiguration _configuration;
         private readonly IStatePropertyAccessor<DialogState> _dialogStateAccessor;
+        private IStatePropertyAccessor<BasicBotState> BasicBotStateAccessor { get; }
 
         private const string WelcomeText = "This bot will help you to get started with QnA Maker. Type a query to get started.";
 
@@ -48,6 +66,7 @@ namespace Microsoft.BotBuilderSamples
             _userState = userState;
             _dialog = dialog;
             _logger = logger;
+            BasicBotStateAccessor = _userState.CreateProperty<BasicBotState>("BasicBotState");
 
             this.InitServices();
         }
@@ -155,13 +174,19 @@ await _userState.SaveChangesAsync(turnContext);
         protected override async Task OnMessageActivityAsync(ITurnContext<IMessageActivity> turnContext, CancellationToken cancellationToken)
         {
             _logger.LogInformation("Running dialog with Message Activity.");
+            var botState = await BasicBotStateAccessor.GetAsync(
+              turnContext, () => new BasicBotState(), cancellationToken);
 
             var phoneNum = turnContext.Activity.Text;
+            
             var regEx = new System.Text.RegularExpressions.Regex(@"1?\W*([2-9][0-8][0-9])\W*([2-9][0-9]{2})\W*([0-9]{4})(\se?x?t?(\d*))?");
 
             if (regEx.Match(phoneNum).Success)
             {
-                this.GenerateCSRNG(phoneNum);
+                botState.phoneNumber = phoneNum;
+               var key = this.GenerateCSRNG(phoneNum);
+                botState.CSRNGKey = key;
+
                 //we have a phone number so log them in to the council
                 // Run the Dialog with the new message Activity.
                 /// await _dialog.Run(turnContext, _conversationState.CreateProperty<DialogState>("DialogState"), cancellationToken);
@@ -178,6 +203,18 @@ await _userState.SaveChangesAsync(turnContext);
             }
             else
             {
+                var userAnswer = turnContext.Activity.Text;
+
+                if (userAnswer.ToLower() == "quit" || userAnswer.ToLower() == "exit" || userAnswer.ToLower() == "end game" || userAnswer.ToLower() == "stop")
+                {
+                    var msgInfo = "Thank you kosmosan, your score is " + botState.Score.ToString() + ". Now you have been initiated into the supreme council and you now just enough to start and go out and save  the world.";
+                    var msgActivity = MessageFactory.Text(msgInfo);
+                    msgActivity.Speak = msgInfo;
+                    msgActivity.InputHint = InputHints.IgnoringInput;
+                    await turnContext.SendActivityAsync(msgActivity, cancellationToken);
+                    return;
+                }
+
                 // Get a random question
                 var cnStr = "Server=tcp:jmcafe-dng.database.windows.net,1433;Initial Catalog=JM_Cafe_DB;Persist Security Info=False;User ID=jmsqladmin;Password=(JMC@f3B0t);MultipleActiveResultSets=False;Encrypt=True;TrustServerCertificate=False;Connection Timeout=30;";
 
@@ -185,6 +222,8 @@ await _userState.SaveChangesAsync(turnContext);
                // var chooseAQuestion = rnd.Next(1, 22);
                 var question = string.Empty;
                 var answer = string.Empty;
+                var fact = string.Empty;
+
                 using (var SqlCn = new System.Data.SqlClient.SqlConnection(cnStr))
                 {
                     SqlCn.Open();
@@ -194,11 +233,19 @@ await _userState.SaveChangesAsync(turnContext);
                     var dr = sqlCmd.ExecuteReader();
                     dr.Read();
                     question = dr["question_txt"].ToString();
-                    answer = dr["correct_answer"].ToString();     
-                    
+                    answer = dr["correct_answer"].ToString();
+                    fact = dr["Fact_Txt"].ToString();
+                    botState.previousQuestion = botState.currentQuestion;
+                    botState.previousFact = botState.currentFact;
+                    botState.previousAnswer = botState.currentAnswer;
+                    botState.currentAnswer = answer;
+                    botState.currentFact = fact;
+                    botState.currentQuestion = question;
                 }
 
-                var userAnswer = turnContext.Activity.Text;
+                await _userState.SaveChangesAsync(turnContext);
+
+               
                 var isSecretCode = false;
                 if (userAnswer.Contains('-'))
                 {
@@ -217,13 +264,14 @@ await _userState.SaveChangesAsync(turnContext);
                 //    await turnContext.SendActivityAsync(MessageFactory.Text("No QnA Maker answers were found."), cancellationToken);
                 //}
 
-                var correctAnswer = answer;
+                var correctAnswer = botState.previousAnswer ;
 
                     if (!isSecretCode)
                     {
                         //check the answer angainst the qnaAnswer Service
                         if (correctAnswer.Trim().ToLower().Contains(userAnswer.ToLower()))
                         {
+                            botState.Score += 10;
                             //we have a good match the user is correct
                             var msgInfo = "Great JOB! We need more people like you. Let's try another one, " + question;
                             var msgActivity = MessageFactory.Text(msgInfo);
@@ -234,7 +282,7 @@ await _userState.SaveChangesAsync(turnContext);
                         }
                         else
                         {
-                            var errMsgInfo = "Let's try again, that was a nice try " + question;
+                            var errMsgInfo = "Let's try again, that was a nice try, the answer is: " + botState.previousAnswer.ToLower() + ".  The facts of the matter are actually, " + botState.previousFact.ToLower() + " Ok try this question, " + question;
                             var msgErrActivity = MessageFactory.Text(errMsgInfo);
                             msgErrActivity.Speak = errMsgInfo;
                             msgErrActivity.InputHint = InputHints.ExpectingInput;
