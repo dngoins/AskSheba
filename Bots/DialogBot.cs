@@ -217,18 +217,28 @@ await _userState.SaveChangesAsync(turnContext);
                     return;
                 }
 
-                var response = await _qnaService.GetAnswersAsync(turnContext);
-                if (response != null && response.Length > 0)
+                userAnswer = userAnswer.ToLower();
+                var enterCouncil = false;
+                if(userAnswer.Contains("climate") || userAnswer.Contains("change") || userAnswer.Contains("world") || userAnswer.Contains("future") || userAnswer.Contains("please"))
                 {
-                    await turnContext.SendActivityAsync(MessageFactory.Text(response[0].Answer), cancellationToken);
-                }
-                else
-                {
-                    var welcomeCard = CreateAdaptiveCardAttachment();
-                    var genericresponse = CreateResponse(turnContext.Activity, welcomeCard);
-                    await turnContext.SendActivityAsync(genericresponse, cancellationToken);
+                    enterCouncil = true;
+                    botState.UserVerified = true;
                 }
 
+                if (!botState.UserVerified)
+                {
+                    var response = await _qnaService.GetAnswersAsync(turnContext);
+                    if (response != null && response.Length > 0)
+                    {
+                        await turnContext.SendActivityAsync(MessageFactory.Text(response[0].Answer), cancellationToken);
+                    }
+                    else
+                    {
+                        var welcomeCard = CreateAdaptiveCardAttachment();
+                        var genericresponse = CreateResponse(turnContext.Activity, welcomeCard);
+                        await turnContext.SendActivityAsync(genericresponse, cancellationToken);
+                    }
+                }
 
                 // Get a random question
                 var cnStr = "Server=tcp:jmcafe-dng.database.windows.net,1433;Initial Catalog=JM_Cafe_DB;Persist Security Info=False;User ID=jmsqladmin;Password=(JMC@f3B0t);MultipleActiveResultSets=False;Encrypt=True;TrustServerCertificate=False;Connection Timeout=30;";
