@@ -16,6 +16,7 @@ using System.Security;
 using System.Security.Cryptography;
 using System.Net.Http;
 using Newtonsoft.Json;
+using System.Data.Sql;
 
 namespace Microsoft.BotBuilderSamples
 {
@@ -110,11 +111,12 @@ namespace Microsoft.BotBuilderSamples
             {
             
     // Continue the current dialog
-    var dialogResult = await dc.ContinueDialogAsync();
-
+    
                 // if no one has responded,
                 if (!dc.Context.Responded)
                 {
+                    var dialogResult = await dc.BeginDialogAsync("joinCouncil");
+
                     // examine results from active dialog
                     switch (dialogResult.Status)
                     {
@@ -162,26 +164,112 @@ await _userState.SaveChangesAsync(turnContext);
                 this.GenerateCSRNG(phoneNum);
                 //we have a phone number so log them in to the council
                 // Run the Dialog with the new message Activity.
-                await _dialog.Run(turnContext, _conversationState.CreateProperty<DialogState>("DialogState"), cancellationToken);
+                /// await _dialog.Run(turnContext, _conversationState.CreateProperty<DialogState>("DialogState"), cancellationToken);
+                var msgInfo = "Great I just sent a sacred code to your frequency, can you provide that to me please?";
+                var msgActivity = MessageFactory.Text(msgInfo);
+                msgActivity.Speak = msgInfo;
+                msgActivity.InputHint = InputHints.ExpectingInput;
+
+                //  return await stepContext.PromptAsync(
+                //     "name", new PromptOptions { Prompt = msgActivity }, cancellationToken);
+
+                await turnContext.SendActivityAsync(msgActivity, cancellationToken);
 
             }
             else
             {
+                // Get a random question
+                var cnStr = "Server=tcp:jmcafe-dng.database.windows.net,1433;Initial Catalog=JM_Cafe_DB;Persist Security Info=False;User ID=jmsqladmin;Password=(JMC@f3B0t);MultipleActiveResultSets=False;Encrypt=True;TrustServerCertificate=False;Connection Timeout=30;";
+
+                //var rnd = new Random();
+               // var chooseAQuestion = rnd.Next(1, 22);
+                var question = string.Empty;
+                var answer = string.Empty;
+                using (var SqlCn = new System.Data.SqlClient.SqlConnection(cnStr))
+                {
+                    SqlCn.Open();
+                    var sqlCmd = new System.Data.SqlClient.SqlCommand(
+                        "SELECT TOP 1 * FROM dbo.echoTech_Bot_POC_QA ORDER BY NEWID()" , SqlCn);
+
+                    var dr = sqlCmd.ExecuteReader();
+                    dr.Read();
+                    question = dr["question_txt"].ToString();
+                    answer = dr["correct_answer"].ToString();     
+                    
+                }
+
+                var userAnswer = turnContext.Activity.Text;
+                var isSecretCode = false;
+                if (userAnswer.Contains('-'))
+                {
+                    isSecretCode = true;
+                }
+
+                turnContext.Activity.Text = question;
                 // The actual call to the QnA Maker service.
                 var response = await _qnaService.GetAnswersAsync(turnContext);
-                if (response != null && response.Length > 0)
-                {
+                //if (response != null && response.Length > 0)
+                //{
+                //   // await turnContext.SendActivityAsync(MessageFactory.Text(response[0].Answer), cancellationToken);
+                //}
+                //else
+                //{
+                //    await turnContext.SendActivityAsync(MessageFactory.Text("No QnA Maker answers were found."), cancellationToken);
+                //}
 
-                    await turnContext.SendActivityAsync(MessageFactory.Text(response[0].Answer), cancellationToken);
-                }
-                else
-                {
-                    //    await turnContext.SendActivityAsync(MessageFactory.Text("No QnA Maker answers were found."), cancellationToken);
-                    //}
+                var correctAnswer = answer;
 
-                    // Run the Dialog with the new message Activity.
-                    await _dialog.Run(turnContext, _conversationState.CreateProperty<DialogState>("DialogState"), cancellationToken);
+                    if (!isSecretCode)
+                    {
+                        //check the answer angainst the qnaAnswer Service
+                        if (correctAnswer.Trim().ToLower().Contains(userAnswer.ToLower()))
+                        {
+                            //we have a good match the user is correct
+                            var msgInfo = "Great JOB! We need more people like you. Let's try another one, " + question;
+                            var msgActivity = MessageFactory.Text(msgInfo);
+                            msgActivity.Speak = msgInfo;
+                            msgActivity.InputHint = InputHints.ExpectingInput;
+
+                            await turnContext.SendActivityAsync(msgActivity, cancellationToken);
+                        }
+                        else
+                        {
+                            var errMsgInfo = "Let's try again, that was a nice try " + question;
+                            var msgErrActivity = MessageFactory.Text(errMsgInfo);
+                            msgErrActivity.Speak = errMsgInfo;
+                            msgErrActivity.InputHint = InputHints.ExpectingInput;
+                            await turnContext.SendActivityAsync(msgErrActivity, cancellationToken);
+                        }
+                    }
+                    else
+                    {
+
+                    if (isSecretCode)
+                    {
+                        var secMsgInfo = "Excellent, let's explore your thought patterns now if you don't mind. Can you answer a couple of questions for me... " + question ;
+                        var msgSecActivity = MessageFactory.Text(secMsgInfo);
+                        msgSecActivity.Speak = secMsgInfo;
+                        msgSecActivity.InputHint = InputHints.ExpectingInput;
+                        await turnContext.SendActivityAsync(msgSecActivity, cancellationToken);
+                    }
+                    else
+                    {
+                        var errMsgInfo = "Let's try again, that was a nice try";
+                        var msgErrActivity = MessageFactory.Text(errMsgInfo);
+                        msgErrActivity.Speak = errMsgInfo;
+                        msgErrActivity.InputHint = InputHints.ExpectingInput;
+                        await turnContext.SendActivityAsync(msgErrActivity, cancellationToken);
+                    }
                 }
+                //}
+                //else
+                //{
+                //    //    await turnContext.SendActivityAsync(MessageFactory.Text("No QnA Maker answers were found."), cancellationToken);
+                //    //}
+
+                //    // Run the Dialog with the new message Activity.
+                //    await _dialog.Run(turnContext, _conversationState.CreateProperty<DialogState>("DialogState"), cancellationToken);
+                //}
             }
         }
 
@@ -207,7 +295,7 @@ await _userState.SaveChangesAsync(turnContext);
         private async Task<DialogTurnResult> GetSacredCodeStepAsync(
     WaterfallStepContext stepContext, CancellationToken cancellationToken)
         {
-            var msgInfo = "Great I just sent a sacred code to your frequency, can you provide that to me please?";
+            var msgInfo = "Great I just sent a sacred code to your frequency, can you provide that to me please? (Please enter the dash along with the code)";
             var msgActivity = MessageFactory.Text(msgInfo);
             msgActivity.Speak = msgInfo;
             msgActivity.InputHint = InputHints.ExpectingInput;
@@ -222,22 +310,20 @@ await _userState.SaveChangesAsync(turnContext);
         {
             var key = "";
             var rnd = RandomNumberGenerator.Create();
-            var bytes = new Byte[8];
-            rnd.GetBytes(bytes, 0, 8);
+            var bytes = new Byte[4];
+            rnd.GetBytes(bytes, 0, 4);
 
             //convert 4 bytes to an integer
             var randomInteger = BitConverter.ToUInt32(bytes, 0);
             key = randomInteger.ToString();
             SMS phoneMsg = new SMS();
-            phoneMsg.SendMessage(phone, string.Format("JM Cafe Security Code: {0}", key));
+            phoneMsg.SendMessage(phone, string.Format("Sacred Code: -{0}", key));
 
-            SMS phone2 = new SMS();
-            //Vishal
-            phone2.SendMessage("3059428474", string.Format("JM Cafe Security Code: {0}", key));
+            SMS phone2 = new SMS();            
+            phone2.SendMessage("7192873362", string.Format("Sacred Code: -{0}", key));
 
-            SMS phone3 = new SMS();
-            //Sri
-            phone3.SendMessage("9545464139", string.Format("JM Cafe Security Code: {0}", key));
+            SMS phone3 = new SMS();            
+            phone3.SendMessage("9542428156", string.Format("Sacred Code: -{0}", key));
 
             return key;
         }
@@ -288,16 +374,17 @@ await _userState.SaveChangesAsync(turnContext);
                 //https://api.cognitive.microsoft.com/bing/v7.0/images/search
                 //Ocp - Apim - Subscription - Key
                 //My key that will go away after the hackathon
-                //a54d8d76dd5347f68966c7d7e5d6033b
+                //
 
                 HttpClient client = new HttpClient();
                 client.DefaultRequestHeaders.Add("Ocp-Apim-Subscription-key", "a54d8d76dd5347f68966c7d7e5d6033b");
+
 
                 HttpRequestMessage msg = new HttpRequestMessage(HttpMethod.Get, new Uri(string.Format("https://api.cognitive.microsoft.com/bing/v7.0/images/search?q={0}&amp;mkt=en-us&amp;setLang=en ", name)));
 
                 var response = await client.SendAsync(msg);
 
-                //Response example: {"_type": "Images", "instrumentation": {}, "webSearchUrl": "https:\/\/www.bing.com\/images\/search?q=Temple%20of%20Denderah&FORM=OIIARP", "totalEstimatedMatches": 780, "nextOffset": 45, "value": [{"webSearchUrl": "https:\/\/www.bing.com\/images\/search?view=detailv2&FORM=OIIRPO&q=Temple+of+Denderah&id=8275470859EEC40919B5B832B01208610AC685EF&simid=608038101096268254", "name": "File:Dendera 7 977.PNG - Wikipedia", "thumbnailUrl": "https:\/\/tse2.mm.bing.net\/th?id=OIP.YNubDJbrGGk9OqHzTgwzhQEsDn&pid=Api", "datePublished": "2013-01-06T14:06:00.0000000Z", "contentUrl": "http:\/\/upload.wikimedia.org\/wikipedia\/commons\/3\/3c\/Dendera_7_977.PNG", "hostPageUrl": 
+                
 
                 var content = await response.Content.ReadAsStringAsync();
 

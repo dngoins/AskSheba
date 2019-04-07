@@ -11,8 +11,8 @@ namespace CoreBot
     public class SMS
     {
 
-        private string _accountSid = "";
-        private string _authToken = "";
+        private string _accountSid = "AC354c6bd3c1b5eef3c9641f9b3838f273";
+        private string _authToken = "05ac899b05461d928070509a79f47eba";
 
         public SMS()
         {
@@ -22,7 +22,7 @@ namespace CoreBot
         public void SendMessage(string phoneNumber, string smsMessage)
         {
             var messageOptions = new CreateMessageOptions(new PhoneNumber(string.Format("+1{0}", phoneNumber)));
-            messageOptions.From = new PhoneNumber("");
+            messageOptions.From = new PhoneNumber("+19545194011");
             messageOptions.Body = smsMessage;
             try
             {
