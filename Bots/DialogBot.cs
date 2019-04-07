@@ -214,15 +214,21 @@ await _userState.SaveChangesAsync(turnContext);
                     msgActivity.Speak = msgInfo;
                     msgActivity.InputHint = InputHints.IgnoringInput;
                     await turnContext.SendActivityAsync(msgActivity, cancellationToken);
+                    botState.phoneNumber = "";
+                    botState.previousAnswer = "";
+                    botState.previousFact = "";
+                    botState.previousQuestion = "";
+                    botState.Score = 0;
+                    botState.UserVerified = false;
+
                     return;
                 }
 
                 userAnswer = userAnswer.ToLower();
-                var enterCouncil = false;
+               
                 if(userAnswer.Contains("climate") || userAnswer.Contains("change") || userAnswer.Contains("world") || userAnswer.Contains("future") || userAnswer.Contains("please"))
                 {
-                    enterCouncil = true;
-                    botState.UserVerified = true;
+                  botState.UserVerified = true;
                 }
 
                 if (!botState.UserVerified)
