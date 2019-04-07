@@ -5,7 +5,8 @@
   "body": [
     {
       "type": "Image",
-      "url": "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQtB3AwMUeNoq4gUBGe6Ocj8kyh3bXa9ZbV7u1fVKQoyKFHdkqU",
+      /*"url": "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQtB3AwMUeNoq4gUBGe6Ocj8kyh3bXa9ZbV7u1fVKQoyKFHdkqU", */
+      "url": "https://i.imgur.com/ak56Uct.png",
       "size": "stretch"
     },
     {
@@ -13,7 +14,7 @@
       "spacing": "medium",
       "size": "default",
       "weight": "bolder",
-      "text": "Welcome to Bot Framework!",
+      "text": "Greetings, I am Queen of Sheba from the year 2200",
       "wrap": true,
       "maxLines": 0
     },
@@ -21,26 +22,25 @@
       "type": "TextBlock",
       "size": "default",
       "isSubtle": "yes",
-      "text": "Now that you have successfully run your bot, follow the links in this Adaptive Card to expand your knowledge of Bot Framework.",
+      "text": "Now that you have successfully invoked me, let me inform you that from what I can now see your behaviors has caused much harm to the climate in which both you and I live. If you would like to hear more please join the council of concerned Sabaens. Enter in your frequency number, amun.... I mean your mobile number.",
       "wrap": true,
       "maxLines": 0
     }
   ],
   "actions": [
-    {
-      "type": "Action.OpenUrl",
-      "title": "Get an overview",
-      "url": "https://docs.microsoft.com/en-us/azure/bot-service/?view=azure-bot-service-4.0"
-    },
-    {
-      "type": "Action.OpenUrl",
-      "title": "Ask a question",
-      "url": "https://stackoverflow.com/questions/tagged/botframework"
-    },
-    {
-      "type": "Action.OpenUrl",
-      "title": "Learn how to deploy",
-      "url": "https://docs.microsoft.com/en-us/azure/bot-service/bot-builder-howto-deploy-azure?view=azure-bot-service-4.0"
-    }
+    //{
+    //  "type": "Action.Submit",
+    //  "title": "Get an overview"      
+    //},
+    //{
+    //  "type": "Action.Submit",
+    //  "title": "Ask a question"
+      
+    //},
+    //{
+    //  "type": "Action.Submit",
+    //  "title": "Join the Council"
+      
+    //}
   ]
 }

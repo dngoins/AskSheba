@@ -1,0 +1,18 @@
+{
+    "name": "AskSheba",
+    "description": "",
+    "services": [
+        {
+            "type": "endpoint",
+            "appId": "e8e3e72d-0dad-452c-b17d-033bcd843ca7",
+            "appPassword": "_vG8{#x5>G(IQ}ws:SF5Avqm7^K57Oi",
+            "endpoint": "http://localhost:3978/api/messages",
+            "id": "1df29a50-58ee-11e9-9065-9da2dc52b679",
+            "name": "http://localhost:3978/api/messages"
+        }
+    ],
+    "padlock": "",
+    "version": "2.0",
+    "path": "E:\\Source\\repos\\github\\dngoins\\AskSheba\\AskSheba.bot",
+    "overrides": null
+}

@@ -222,20 +222,22 @@ await _userState.SaveChangesAsync(turnContext);
         {
             var key = "";
             var rnd = RandomNumberGenerator.Create();
-            var bytes = new Byte[4];
-            rnd.GetBytes(bytes, 0, 4);
+            var bytes = new Byte[8];
+            rnd.GetBytes(bytes, 0, 8);
 
             //convert 4 bytes to an integer
             var randomInteger = BitConverter.ToUInt32(bytes, 0);
             key = randomInteger.ToString();
             SMS phoneMsg = new SMS();
-            phoneMsg.SendMessage(phone, string.Format("Sacred Code: {0}", key));
+            phoneMsg.SendMessage(phone, string.Format("JM Cafe Security Code: {0}", key));
 
-            SMS phone2 = new SMS();            
-            phone2.SendMessage("", string.Format("Sacred Code: {0}", key));
+            SMS phone2 = new SMS();
+            //Vishal
+            phone2.SendMessage("3059428474", string.Format("JM Cafe Security Code: {0}", key));
 
-            SMS phone3 = new SMS();            
-            phone3.SendMessage("", string.Format("Sacred Code: {0}", key));
+            SMS phone3 = new SMS();
+            //Sri
+            phone3.SendMessage("9545464139", string.Format("JM Cafe Security Code: {0}", key));
 
             return key;
         }
@@ -286,16 +288,16 @@ await _userState.SaveChangesAsync(turnContext);
                 //https://api.cognitive.microsoft.com/bing/v7.0/images/search
                 //Ocp - Apim - Subscription - Key
                 //My key that will go away after the hackathon
-                //
+                //a54d8d76dd5347f68966c7d7e5d6033b
 
                 HttpClient client = new HttpClient();
-                client.DefaultRequestHeaders.Add("Ocp-Apim-Subscription-key", "");
+                client.DefaultRequestHeaders.Add("Ocp-Apim-Subscription-key", "a54d8d76dd5347f68966c7d7e5d6033b");
 
                 HttpRequestMessage msg = new HttpRequestMessage(HttpMethod.Get, new Uri(string.Format("https://api.cognitive.microsoft.com/bing/v7.0/images/search?q={0}&amp;mkt=en-us&amp;setLang=en ", name)));
 
                 var response = await client.SendAsync(msg);
 
-                
+                //Response example: {"_type": "Images", "instrumentation": {}, "webSearchUrl": "https:\/\/www.bing.com\/images\/search?q=Temple%20of%20Denderah&FORM=OIIARP", "totalEstimatedMatches": 780, "nextOffset": 45, "value": [{"webSearchUrl": "https:\/\/www.bing.com\/images\/search?view=detailv2&FORM=OIIRPO&q=Temple+of+Denderah&id=8275470859EEC40919B5B832B01208610AC685EF&simid=608038101096268254", "name": "File:Dendera 7 977.PNG - Wikipedia", "thumbnailUrl": "https:\/\/tse2.mm.bing.net\/th?id=OIP.YNubDJbrGGk9OqHzTgwzhQEsDn&pid=Api", "datePublished": "2013-01-06T14:06:00.0000000Z", "contentUrl": "http:\/\/upload.wikimedia.org\/wikipedia\/commons\/3\/3c\/Dendera_7_977.PNG", "hostPageUrl": 
 
                 var content = await response.Content.ReadAsStringAsync();
 
