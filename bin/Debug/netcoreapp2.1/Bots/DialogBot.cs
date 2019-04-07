@@ -17,6 +17,8 @@ using System.Security.Cryptography;
 using System.Net.Http;
 using Newtonsoft.Json;
 using System.Data.Sql;
+using System.IO;
+using System.Collections.Generic;
 
 namespace Microsoft.BotBuilderSamples
 {
@@ -215,6 +217,19 @@ await _userState.SaveChangesAsync(turnContext);
                     return;
                 }
 
+                var response = await _qnaService.GetAnswersAsync(turnContext);
+                if (response != null && response.Length > 0)
+                {
+                    await turnContext.SendActivityAsync(MessageFactory.Text(response[0].Answer), cancellationToken);
+                }
+                else
+                {
+                    var welcomeCard = CreateAdaptiveCardAttachment();
+                    var genericresponse = CreateResponse(turnContext.Activity, welcomeCard);
+                    await turnContext.SendActivityAsync(genericresponse, cancellationToken);
+                }
+
+
                 // Get a random question
                 var cnStr = "Server=tcp:jmcafe-dng.database.windows.net,1433;Initial Catalog=JM_Cafe_DB;Persist Security Info=False;User ID=jmsqladmin;Password=(JMC@f3B0t);MultipleActiveResultSets=False;Encrypt=True;TrustServerCertificate=False;Connection Timeout=30;";
 
@@ -252,9 +267,9 @@ await _userState.SaveChangesAsync(turnContext);
                     isSecretCode = true;
                 }
 
-                turnContext.Activity.Text = question;
+                //turnContext.Activity.Text = question;
                 // The actual call to the QnA Maker service.
-                var response = await _qnaService.GetAnswersAsync(turnContext);
+                //var response = await _qnaService.GetAnswersAsync(turnContext);
                 //if (response != null && response.Length > 0)
                 //{
                 //   // await turnContext.SendActivityAsync(MessageFactory.Text(response[0].Answer), cancellationToken);
@@ -411,8 +426,27 @@ await _userState.SaveChangesAsync(turnContext);
         }
 
 
-      
-            
+        private Activity CreateResponse(IActivity activity, Attachment attachment)
+        {
+            var response = ((Activity)activity).CreateReply();
+            response.Attachments = new List<Attachment>() { attachment };
+            return response;
+        }
+
+        // Load attachment from file.
+        private Attachment CreateAdaptiveCardAttachment()
+        {
+            // combine path for cross platform support
+            string[] paths = { ".", "Cards", "welcomeCard.json" };
+            string fullPath = Path.Combine(paths);
+            var adaptiveCard = File.ReadAllText(fullPath);
+            return new Attachment()
+            {
+                ContentType = "application/vnd.microsoft.card.adaptive",
+                Content = JsonConvert.DeserializeObject(adaptiveCard),
+            };
+        }
+
         private static async Task<Uri> GetBingImageUrl(string name)
         {
             Uri url = new Uri("http://tempuri.org");
